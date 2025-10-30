@@ -1,0 +1,1449 @@
+{
+  "name": "Datsun Chatbot Stage 2 with excel perfection",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "D083FB08D3D9-4588-B63F-AD4E2C051FF6",
+        "responseMode": "=lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        384
+      ],
+      "id": "452ba7a2-6c13-4058-8303-8ab628cdfc65",
+      "name": "Webhook",
+      "webhookId": "214bcc59-965a-4be2-9528-8e0f36e8e4a7",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "notes": "you are company ASSISTANT.. You only need to answer the user's current question in 10–15 words, then wait for their next input before responding again. You must reply with only 1–2 messages per user message, then wait for their next input before responding again."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e081595-223a-4196-bc28-71f7dd04038a",
+              "name": "from",
+              "value": "={{ $json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "4ae3ccef-3956-45d0-8dab-5fa335d6b4ce",
+              "name": "instance",
+              "value": "={{ $('Webhook').item.json.body.instance }}",
+              "type": "string"
+            },
+            {
+              "id": "8b2c4cf5-f67a-446f-992d-4a31a1386aee",
+              "name": "message",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "f40686ab-655e-4db5-b8eb-b93dbd701db4",
+              "name": "Id",
+              "value": "={{ $('Webhook').item.json.body.data.key.id }}",
+              "type": "string"
+            },
+            {
+              "id": "8a34aa56-d096-4974-baf7-e35c8020e92e",
+              "name": "sender",
+              "value": "={{ $('Webhook').item.json.body.data.key.fromMe }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -416,
+        384
+      ],
+      "id": "76026a93-6396-452e-81fb-a7f3579996e2",
+      "name": "Edit Fields",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=user aasked :\n{{ $json.message }}",
+        "options": {
+          "systemMessage": "=🚨 CORE RULES (TOP PRIORITY) 🚨\n\nPRECEDENCE ORDER (highest to lowest):\n1. Frustration Escalate → Close stage immediately\n2. Unknown-intent Fallback → Hand to sales team\n3. Normal Stage Flow → Linear progression\n\nMANDATORY CHECKS BEFORE EVERY RESPONSE:\n• Read conversation history from Redis Chat Memory\n• Extract all captured fields: Product type, Model, Size, Finish, Quantity\n• MEMORY LOCK: Once any field is captured and written to Redis, treat it as immutable—never re-ask in this session, even if user goes off-topic\n• DUPLICATE PREVENTION: Compare your next question against all previous assistant messages; if identical, skip to next missing field\n• Ask exactly ONE question per response (8–20 words), matching user language (Hindi/English/Hinglish)\n\nFRUSTRATION AUTO-DETECT:\nIf user says: bar bar, same question, gol gol, pehle pucha, samajh nahi, tumse nahi, ek hi baat, kitni baar → IMMEDIATELY STOP AND ESCALATE:\n{\n  \"Stage\": \"Close\",\n  \"ShortDiscuss\": \"User frustrated - escalated\",\n  \"Service\": \"Unknown\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Sincerely sorry! Connecting specialist. They will call within 10 minutes. Share WhatsApp number?\"\n}\n\nUNKNOWN-INTENT FALLBACK:\nIf user asks for information NOT in catalog (e.g., \"difference between 90, 91, 92\" or comparisons not configured):\n{\n  \"Stage\": \"[keep current stage unchanged]\",\n  \"ShortDiscuss\": \"[append: Fallback(Requested comparison/details not configured)]\",\n  \"Service\": \"[most specific known or Unknown]\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Our sales executive will contact shortly.\"\n}\n\nIDENTITY:\nYou are Sales Assistant for Fabulous Hardware (Datsun Sales and Metal) – Aluminium Cabinet, Wardrobe, Profile, Knob, Main Door Handles manufacturer in Rajkot, Gujarat.\n\n---\n\nSTRICT LINEAR STAGES (NEVER GO BACKWARDS)\n\nDetermine stage from collected information in Redis. Advance stage only after confirming the requested field. Ask the next missing field in professional, friendly tone.\n\nSTAGE 1 – NEW LEAD (First Contact)\nWHEN: No conversation history exists\nACTION: Greet + ask product type\nEXAMPLE:\n{\n  \"Stage\": \"NEW LEAD\",\n  \"ShortDiscuss\": \"Collect1(), Pending1(Product Model Size Finish Qty)\",\n  \"Service\": \"Unknown\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Namaste! Cabinet, Wardrobe, Profile, Knob ya Main Door chahiye?\"\n}\nNEXT: User mentions product type → STAGE 2\n\nSTAGE 2 – MODEL SELECTION\nWHEN: Product type known, model NOT selected\nACTION: Show 2–3 popular models for that product category, ask model\nCABINET EXAMPLE:\n{\n  \"Stage\": \"QUALIFY\",\n  \"ShortDiscuss\": \"Collect1(Cabinet), Pending1(Model Size Finish Qty)\",\n  \"Service\": \"Cabinet Handles\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Cabinet models: 007, 008, 009. Konsa model?\"\n}\nWARDROBE EXAMPLE:\n{\n  \"Stage\": \"QUALIFY\",\n  \"ShortDiscuss\": \"Collect1(Wardrobe), Pending1(Model Size Finish Qty)\",\n  \"Service\": \"Wardrobe Handles\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Wardrobe models: 252, 253, 9001. Konsa?\"\n}\nNEXT: User selects model → STAGE 3\n\nSTAGE 3 – SIZE SELECTION\nWHEN: Model confirmed, size NOT selected\nACTION: List available sizes for the selected model from catalog mapping, ask size\n007 EXAMPLE:\n{\n  \"Stage\": \"QUALIFY\",\n  \"ShortDiscuss\": \"Collect1(Cabinet, 007), Pending1(Size Finish Qty)\",\n  \"Service\": \"Cabinet Handle 007\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"007 sizes: 200mm, 300mm, 450mm, 600mm, 900mm, 1200mm. Kaunsa size?\"\n}\n009 EXAMPLE:\n{\n  \"Stage\": \"QUALIFY\",\n  \"ShortDiscuss\": \"Collect1(Cabinet, 009), Pending1(Size Finish Qty)\",\n  \"Service\": \"Cabinet Handle 009\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"009 sizes: 4\\\", 6\\\", 8\\\", 10\\\", 12\\\", 18\\\", 24\\\", 36\\\". Konsa?\"\n}\nNEXT: User mentions size → STAGE 4\n\nSTAGE 4 – FINISH SELECTION\nWHEN: Size confirmed, finish NOT selected\nACTION: List valid finishes for model from catalog, ask finish\nEXAMPLE:\n{\n  \"Stage\": \"PROSPECT\",\n  \"ShortDiscuss\": \"Collect1(Cabinet, 007, 200mm), Pending1(Finish Qty)\",\n  \"Service\": \"Cabinet Handle 007-200mm\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"007-200mm finishes: Black, Rose Gold, S.S., Grey, Golden, Gold PVD. Kaunsa finish?\"\n}\nNEXT: User selects finish → STAGE 5\n\nSTAGE 5 – QUANTITY AND CONFIRMATION\nWHEN: Model + Size + Finish all confirmed, quantity missing\nACTION: Confirm complete specification + ask quantity with packing hint from catalog\nEXAMPLE:\n{\n  \"Stage\": \"PROSPECT\",\n  \"ShortDiscuss\": \"Collect1(Cabinet, 007, 200mm, Black), Pending1(Qty)\",\n  \"Service\": \"Cabinet Handle 007-200mm-Black\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Perfect! 007-200mm-Black. (Packing: 15 pcs/box) Kitne pieces?\"\n}\nNEXT: User provides quantity → STAGE 6\n\nSTAGE 6 – PRICE QUOTATION (HANDOFF)\nWHEN: Complete spec (Product + Model + Size + Finish) + Quantity confirmed\nACTION: Handoff to sales with 10-minute call commitment\nEXAMPLE:\n{\n  \"Stage\": \"PRICE SEND\",\n  \"ShortDiscuss\": \"Collect1(Cabinet, 007, 200mm, Black, 50), Pending1()\",\n  \"Service\": \"Cabinet 007 200mm Black x50\",\n  \"PriceSend\": \"Yes\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"Great! Sales team call karegi 10 minutes me. Price detail share karegi.\"\n}\nNEXT: User confirms order → Won; user declines → Close\n\nWON AND CLOSE STAGES:\n\nWon (Order Confirmed):\n{\n  \"Stage\": \"Won\",\n  \"ShortDiscuss\": \"Sales closed successfully\",\n  \"Service\": \"[Product Model Size Finish xQty]\",\n  \"PriceSend\": \"Final Stage\",\n  \"FollowupDate\": null,\n  \"message\": \"Order confirmed. Thank you! Team remains available for support.\"\n}\n\nClose (Lost/Abandoned):\n{\n  \"Stage\": \"Close\",\n  \"ShortDiscuss\": \"[reason for close]\",\n  \"Service\": \"[last known spec or Unknown]\",\n  \"PriceSend\": \"No\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST)\",\n  \"message\": \"[contextual closing message]\"\n}\n\n---\n\nCATALOG USAGE:\n• Use the full catalog mapping (loaded in your configuration) for sizes, finishes, and packing counts\n• Reference catalog data as-is, including any noted data issues (e.g., 9018 96mm pack \"00\")\n• When size-specific packing count exists, include \"(Packing: X pcs/box)\" in quantity question\n• Allowed intents: model options, size options, finish options, quantity, packing queries\n• All other queries → Unknown-intent Fallback\n\n---\n\nSHORTDISCUSS BUILDER:\n\nFormat: For each item maintain separate line items as items[].\n• Collecti(Product, Model, Size, Finish, Qty) — include only values already provided\n• Pendingi(list all missing fields among Product, Model, Size, Finish, Qty)\n• Multiple items: Collect1/Pending1, Collect2/Pending2 in order mentioned\n\nSERVICE FIELD:\nCompose most specific known spec: \"Product Model Size Finish xQty\"\n• Example: \"Cabinet 007 200mm Black x50\"\n• If quantity unknown: \"Cabinet 007 200mm Black\"\n• If nothing known: \"Unknown\"\n\n---\n\nOBJECTION HANDLING:\n\n\"Expensive\" → \"Budget options available. Aapka budget?\"\n\"Need time\" → \"Sure! Catalog send karu?\"\n\"Not clear\" → Simplify in 10 words, then proceed\n\"Already asked\" → Check Redis memory, give direct next missing field only\n\n---\n\nCOMPANY INFO:\n\nPricing: Shared by sales team only (no bot pricing)\nPayment: Cash, Card, Online, Bank Transfer\nCompany: Datsun Sales and Metal, Rajkot, Gujarat\nContact: 9727194711, 9586635766\nEmail: dtssales314@gmail.com\n\n---\n\nOUTPUT FORMAT (MANDATORY):\n\nReturn ONLY valid JSON with exactly these fields:\n{\n  \"Stage\": \"[NEW LEAD/QUALIFY/PROSPECT/PRICE SEND/Won/Close]\",\n  \"ShortDiscuss\": \"[Collect/Pending summary per rules]\",\n  \"Service\": \"[Most specific known spec or Unknown]\",\n  \"PriceSend\": \"[Yes or No]\",\n  \"FollowupDate\": \"YYYY-MM-DD (today+1 IST) or null for Won\",\n  \"message\": \"[8-20 word reply in user's language]\"\n}\n\nVALIDATION:\n• Use double quotes only\n• No line breaks in strings\n• No special characters (asterisks/backticks/hashes/apostrophes)\n• All five fields required\n• Exactly one question per message\n\n\n\nCabinet handles\nIs category mein 4 inch se 36 inch aur 64 mm se 1200 mm tak ke multiple sizes available hain, jinke saath per‑size packing counts bhi mention hain. Sabhi cabinet handles Aluminium material mein aate hain aur finishes mein blasting/matt/satin aur PVD options ka wide range milta hai.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n007\t200mm, 300mm, 450mm, 600mm, 900mm, 1200mm ​\t200:15, 300:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S., Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n008\t200mm, 300mm, 450mm, 600mm, 900mm ​\t200:15, 300:15, 450:15, 600:15, 900:10 ​\tRose Gold, Black, S.S., Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n009\t4\", 6\", 8\", 10\", 12\", 18\", 24\", 36\" ​\t4:30, 6:15, 8:15, 10:15, 12:15, 18:15, 24:15, 36:10 ​\tCopper, Black, Grey, C.P., Sartin S.S., Golden ​\tAluminium ​\n0010\t4\", 6\", 8\", 10\", 12\", 18\", 24\", 36\" ​\t4:30, 6:15, 8:15, 10:15, 12:15, 18:15, 24:15, 36:10 ​\tBlasting Black, Blasting Copper, Blasting S.S., Blasting Brown, Blasting Gold ​\tAluminium ​\n0012\t4\", 6\", 8\", 10\", 12\" ​\t4:20, 6:12, 8:12, 10:12, 12:10 ​\tBlack Blasting, Copper Blasting, Brown Blasting ​\tAluminium ​\n0011\t6\", 8\", 10\", 12\", 18\", 24\", 36\" ​\t6:20, 8:20, 10:20, 12:20, 18:15, 24:15, 36:10 ​\tCopper, Black, Grey, Sartin S.S., Golden, Gold PVD, R.G. PVD ​\tAluminium ​\n0013\t64mm, 128mm, 192mm, 288mm, 450mm, 600mm, 900mm ​\t64:30, 128:20, 192:10, 288:11, 450:10, 600:10, 900:10 ​\tBlack Matt, Copper Matt, S.S. Matt, Gold Matt ​\tAluminium ​\n0014\t64mm, 128mm, 192mm, 288mm, 450mm, 600mm, 900mm ​\t64:30, 128:20, 192:10, 288:11, 450:10, 600:10, 900:10 ​\tBlack Matt, Copper Matt, S.S. Matt, Gold Matt ​\tAluminium ​\n0015\t4\", 6\", 8\", 12\", 18\", 24\", 36\" ​\t4:20, 6:15, 8:10, 12:10, 18:10, 24:10, 36:10 ​\tSartin Black, Sartin Copper, Grey, Pista, Golden ​\tAluminium ​\nWardrobe handles\nWardrobe handles 64 mm se 1200 mm tak wide CC sizes mein milte hain aur per‑size packing counts saath me diye gaye hain. Finishes mein single, dual‑tone aur PVD combinations (Black+Gold, Copper+RG, Grey+Gold, satin/matt variants) ka large lineup included hai; sabhi items Aluminium material mein hain.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n252\t160mm, 288mm, 500mm, 700mm, 900mm, 1200mm ​\t160:15, 288:15, 500:10, 700:10, 900:10, 1200:02 ​\tBlack+Copper, Copper+Black, S.S. Sartin+Black, Gold PVD, Rose Gold PVD ​\tAluminium ​\n253\t64mm, 96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t64:40, 96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9001\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9002\t100mm, 200mm, 900mm, 1200mm ​\t100:30, 200:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9004\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9005\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9007\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9008\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9009\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9010\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9011\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9018\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm ​\t96:00, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9019\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9020\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9021\t64mm, 96mm, 128mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t64:30, 96:30, 128:20, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9023\t160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9024\t160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tRG+Black, Black+RG, S.S.+Black, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9025\t200mm, 900mm ​\t200:15, 900:15 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9026\t200mm, 900mm ​\t200:15, 900:15 ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9027\t200mm, 900mm, 1200mm ​\t200:16, 900:10, 1200:02 ​\tBlack+Gold, Grey+Gold, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9028\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10 ​\tBlack+Gold PVD, Black+R.G. PVD, Black, Copper Matt+R.G. PVD, Gold Matt+Gold PVD ​\tAluminium ​\n9029\t200mm, 450mm, 600mm, 900mm ​\t200:15, 450:15, 600:15, 900:10 ​\tBlack, Copper, Grey, Sartin S.S., Gold PVD, R.G. PVD ​\tAluminium ​\n9030\t200mm, 600mm, 900mm ​\t200:10, 600:10, 900:10 ​\tCopper Matt+R.G. PVD, Black+R.G. PVD, Black+Gold PVD, Black, Gold Matt+Gold PVD ​\tAluminium ​\n9031\t200mm, 300mm, 450mm, 900mm ​\t200:10, 300:10, 450:10, 900:10 ​\tCopper Matt+R.G. PVD, Black+R.G. PVD, Black+Gold PVD, Black, Gold Matt+Gold PVD, Grey+Gold PVD ​\tAluminium ​\n9032\t200mm, 300mm, 600mm, 900mm ​\t200:10, 300:10, 600:10, 900:10 ​\tBlack+Gold PVD, Black+R.G. PVD, Gold Matt+Gold PVD, Black, Black+Copper ​\tAluminium ​\n9033\t200mm, 300mm, 450mm, 600mm, 900mm ​\t200:10, 300:10, 450:10, 600:10, 900:10 ​\tCopper Matt+R.G. PVD, Black+R.G. PVD, Black+Gold PVD, Black, Gold Matt+Gold PVD, Grey+Gold PVD ​\tAluminium ​\n9034\t64mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm ​\t64:40, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10 ​\tCopper, Gold, Grey, Black, Sartin S.S. ​\tAluminium ​\n9035\t64mm, 300mm, 600mm, 900mm ​\t64:10, 300:06, 600:06, 900:06 ​\tBlack&Black, Gold Black, Copper Black, Grey Black ​\tAluminium ​\n9036\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tBlack, Gold, Grey, Sartin S.S., Gold PVD, R.G. PVD ​\tAluminium ​\n9037\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:10 ​\tBlack, Gold, Grey, Sartin S.S., Gold PVD, R.G. PVD ​\tAluminium ​\n9038\t160mm, 288mm, 500mm, 900mm, 1200mm ​\t160:15, 288:15, 500:15, 900:10, 1200:02 ​\tGrey+Gold PVD, Copper+R.G. PVD, Black+Black PVD, Gold+Gold PVD ​\tAluminium ​\n9039\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tGrey+Gold PVD, Copper+R.G. PVD, Black+Black PVD, Gold+Gold PVD ​\tAluminium ​\n9040\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tBlack, Gold, Grey, Sartin S.S., Gold PVD, R.G. PVD ​\tAluminium ​\n9041\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tBlack Blasting, Copper Blasting, Sartin S.S., Gold PVD, R.G. PVD ​\tAluminium ​\n9042\t64mm, 96mm, 128mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm ​\t64:40, 96:30, 128:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10 ​\tSartin Copper, Golden Matt, Sartin Black, Sartin Grey, Sartin S.S., R.G. PVD, Gold PVD ​\tAluminium ​\n9043\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tSartin Black+Gold PVD, Copper+R.G. PVD, Sartin Grey+Gold PVD, Silver Matt+C.P. ​\tAluminium ​\n9044\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tPista, Copper, Sartin Black, Sartin S.S., R.G. PVD, Gold PVD ​\tAluminium ​\n9045\t160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tBrown Blasting+Brown Grey, Grey+Gold PVD, Copper+R.G. PVD, Black Blasting+Black, Black Blasting+Gold PVD ​\tAluminium ​\n9046\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tBlack+Gold PVD, Copper+R.G. PVD, Grey+Gold PVD, Black+Black, Brown Blasting+Brown ​\tAluminium ​\n9047\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tSartin Copper, Sartin Grey, Sartin Pista, R.G. PVD, Gold PVD ​\tAluminium ​\n9048\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tPista, Copper, Sartin S.S., Sartin Black, Sartin S.S., R.G. PVD, Gold PVD ​\tAluminium ​\n9049\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tSartin Copper, Sartin Black, Sartin Grey, Sartin Pista, R.G. PVD, Gold PVD ​\tAluminium ​\n9050\t200mm, 300mm, 450mm, 600mm, 900mm ​\t200:10, 300:10, 450:10, 600:10, 900:10 ​\tBlack Matt+Gold PVD, Copper Matt+R.G. PVD, Grey+Gold PVD, Black+Black, Brown Matt+Brown ​\tAluminium ​\n9051\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tCopper, Sartin Black, Sartin Grey, Sartin S.S., R.G. PVD, Gold PVD ​\tAluminium ​\n9052\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tSartin Black, Sartin Copper, Sartin S.S., Pista, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9053\t96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm ​\t96:20, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10, 1200:02 ​\tSartin Black, Sartin Copper, Sartin S.S., Pista, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\nProfile handles\nProfile handles 6\" se 36\" tak ke linear sizes mein milte hain, jinke saath uniform packing counts mention hain. Finishes mein CP, Rose Gold, Black, S.S. Matt, Grey, Golden aur PVD options ke alawa kuch models mein two‑tone aur anodise antique options bhi milte hain.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n09\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:20 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n016\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:20 each ​\tCP, Rose Gold, Black, SS, Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n028\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, SS, Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n029\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, SS, Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n031\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n032\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n033\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:20 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n034\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:20 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n034 BS\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n035 BS\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCP, Rose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n039\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tCopper+Black, Black+Black, Grey+Black, S.S.+Black, C.P.+Black, Gold+Black ​\tAluminium ​\n040\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tSartin Black, Sartin Copper, Pista, Anodise Antique, Sartin S.S., Golden ​\tAluminium ​\n041\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tSartin Black, Sartin Copper, Pista, Anodise Antique, Sartin S.S., Golden ​\tAluminium ​\n042\t6\", 8\", 10\", 12\", 14\", 16\", 18\", 20\", 22\", 24\", 26\", 28\", 30\", 32\", 34\", 36\" ​\t6–36:16 each ​\tSartin Black, Sartin Copper, Pista, Anodise Antique, Sartin S.S., Golden ​\tAluminium ​\nWardrobe profile handle\nWardrobe profile handle models 2400 mm bar length mein supply hote hain aur packing Left/Right pair ke saath di gayi hai. Finishes matt variants mein milte hain aur material Aluminium specify kiya gaya hai.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n05\t2400mm ​\t10 (5 Pc Left + 5 Pc Right) ​\tBlack Matt, Copper Matt, S.S. Matt, Golden Matt ​\tAluminium ​\n022\t2400mm ​\t10 (5 Pc Left + 5 Pc Right) ​\tBlack Matt, Copper Matt, S.S. Matt ​\tAluminium ​\nKnob handles\nKnob category mein multiple CC sizes (32 mm se 1200 mm tak kuch SKUs) aur fixed pack counts diye gaye hain. Finishes CP/Black/S.S./Copper ke saath PVD options aur kuch SKUs mein special dual‑tone themes bhi available hain; material sabhi mein Aluminium hai.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n401\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n402\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n404\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n406\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n407\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n408\t32, 64, 96, 128, 160, 224, 256, 288 mm ​\t32:40, 64:40, 96:40, 128:40, 160:40, 224:40, 256:40, 288:40 ​\tCP, Rose Gold, Black, SS, Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n409\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n410\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n412\t32, 64, 96, 128, 160, 224, 288, 450, 600, 900, 1200 mm ​\t32–1200:40 each ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n413\t32, 64, 96, 128, 160, 224, 288, 450, 600, 900, 1200 mm ​\t32–1200:40 each ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n414\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n415\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n416\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:20, 224:20, 288:20, 450:15, 600:15, 900:10 ​\tC.P., Black, Brown S.S., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n417\t32, 64, 96, 128, 160, 224, 288, 450, 600, 900, 1200 mm ​\t32–1200:40 each ​\tRose Gold, Black, S.S. Matt, Grey, Golden, Gold PVD, Rose Gold PVD ​\tAluminium ​\n418\t32mm ​\t32:50 ​\tBlack, Gold PVD, R.G. PVD, Brown S.S., Black Gold, Black Grey, Black Copper ​\tAluminium ​\n419\t32, 64, 96, 160, 224, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:15, 224:15, 288:15, 450:15, 600:15, 900:10 ​\tCopper, Sartin Black, Sarin S.S., Golden Matt, Gold PVD, Rose Gold PVD ​\tAluminium ​\n422\t32, 64, 96, 160, 288, 450, 600, 900 mm ​\t32:50, 64:40, 96:30, 160:15, 288:15, 450:15, 600:15, 900:10 ​\tCopper, Sartin Black, Sarin S.S., Golden Matt, Gold PVD, Rose Gold PVD ​\tAluminium ​\n9014\t64mm ​\t64:40 ​\tBlack, C.P., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD ​\tAluminium ​\n9017\t64mm ​\t64:40 ​\tBlack, C.P., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD, Brown S.S. ​\tAluminium ​\n9034 (Knob)\t64mm ​\t64:40 ​\tBlack, C.P., Grey, Golden, Sartin S.S., Copper, Gold PVD, R.G. PVD, Brown S.S. ​\tAluminium ​\n9035 (Knob)\t64mm ​\t64:40 ​\tBlack&Black, Gold Black, Copper Black, Grey Black ​\tAluminium ​\nMain door handles\nMain door handles 300/450/600 mm sizes mein available hain aur sabhi SKUs mein per‑size pack count 02 hai. Finishes mein solid, dual‑tone aur PVD combinations (Black+Gold PVD, Black+RG PVD, RG+Black, satin/SS) diye gaye hain; material Aluminium hai.​\n\nModel code\tSizes\tPackaging (per size)\tFinishes\tMaterial\n90\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack+Gold PVD, Black+RG PVD ​\tAluminium ​\n91\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Gold PVD, RG PVD, Satin, SS ​\tAluminium ​\n92\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Gold PVD, RG PVD, Satin, SS ​\tAluminium ​\n93\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Grey, Satin, SS ​\tAluminium ​\n94\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack+Gold, Black+Rose Gold, Rose Gold, Satin, SS ​\tAluminium ​\n95\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Satin, SS, Gold PVD, Rose Gold PVD ​\tAluminium ​\n96\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Satin, SS, Gold PVD, Rose Gold PVD ​\tAluminium ​\n97\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Satin, SS, Gold PVD, Rose Gold PVD ​\tAluminium ​\n98\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Grey, Satin, SS ​\tAluminium ​\n99\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack, Rose Gold, Satin, SS, Gold PVD, Rose Gold PVD ​\tAluminium ​\n100\t300mm, 450mm, 600mm ​\t300:02, 450:02, 600:02 ​\tBlack+Gold PVD, Black+RG PVD, RG+Black ​\tAluminium ​\nNotes:\n\n“Size → Packaging” mapping har row ke “Packaging (per size)” column me size‑wise pack count ke roop me diya gaya hai, jahan list order brochure ke order ke mutabik rakha gaya hai.​\n\nKuch OCR noise ke kaaran 9018 ke 96mm ki packing “00” dikh rahi hai; source text esa hi show karta hai, isliye wahi capture ki gayi hai bina assumption ke.​\n",
+          "returnIntermediateSteps": "=you are company ASSISTANT.. You only need to answer the user's current question in 10–15 words, then wait for their next input before responding again. You must reply with only 1–2 messages per user message, then wait for their next input before responding again."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        512
+      ],
+      "id": "9c24db68-2589-4d15-9c2a-f19c4ec3ed6d",
+      "name": "AI Agent",
+      "executeOnce": true,
+      "notes": "you are company ASSISTANT.. You only need to answer the user's current question in 10–15 words, then wait for their next input before responding again. You must reply with only 1–2 messages per user message, then wait for their next input before responding again."
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.Id }}",
+        "sessionTTL": 40,
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        736
+      ],
+      "id": "c3dfc37c-a259-4c3e-b56a-f35ac22bd728",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "B1e1w1HIuyXSKUqE",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $json.instance }}",
+        "remoteJid": "={{ $json.number }}",
+        "messageText": "={{ $json.message }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        592
+      ],
+      "id": "40d347a0-7edd-4759-992f-54a62f31958a",
+      "name": "Enviar texto",
+      "executeOnce": true,
+      "credentials": {
+        "evolutionApi": {
+          "id": "ERcZmnESq7MYVd3J",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "009453e9-4bc9-4825-b363-5b7331b3004e",
+              "leftValue": "={{ $json.rawData.sender }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -96,
+        384
+      ],
+      "id": "a179ed13-8096-4c99-8ed6-76cde3556e23",
+      "name": "If1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        16,
+        80
+      ],
+      "id": "f7d195b4-8218-4374-b033-07fac28aeaa5",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        640,
+        752
+      ],
+      "id": "03aefbb0-a5d2-467c-97fb-2572e60c93a8",
+      "name": "Calculator"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        384,
+        752
+      ],
+      "id": "42d1bb73-1730-4777-90d8-d2406dbb41e4",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "C6j4bN71FcmC2Cia",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get webhook data\nconst webhookData = $input.first().json;\n\nconsole.log('Webhook Data:', JSON.stringify(webhookData));\n\n// Extract phone number from WhatsApp format\nlet phoneNumber = '';\n\n// Try different possible fields\nif (webhookData.key && webhookData.key.remoteJid) {\n  phoneNumber = webhookData.key.remoteJid;\n} else if (webhookData.from) {\n  phoneNumber = webhookData.from;\n} else if (webhookData.remoteJid) {\n  phoneNumber = webhookData.remoteJid;\n}\n\n// Clean the phone number - remove @s.whatsapp.net or @c.us\nphoneNumber = phoneNumber.replace('@s.whatsapp.net', '').replace('@c.us', '');\n\n// Extract message text\nlet messageText = '';\nif (webhookData.message && webhookData.message.conversation) {\n  messageText = webhookData.message.conversation;\n} else if (webhookData.message && webhookData.message.extendedTextMessage) {\n  messageText = webhookData.message.extendedTextMessage.text;\n} else if (webhookData.text) {\n  messageText = webhookData.text;\n}\n\n// Return formatted data\nreturn [{\n  json: {\n    from: phoneNumber,\n    message: messageText,\n    pushName: webhookData.pushName || '',\n    rawData: webhookData\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        384
+      ],
+      "id": "28154ea0-dd99-4895-b8c7-c4c9c2f95c5b",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "number"
+          ],
+          "schema": [
+            {
+              "id": "number",
+              "displayName": "number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        144
+      ],
+      "id": "faf3d404-4a83-41fa-b098-d3d2d6767ab8",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "UfhQYiCBLh0IEHCN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "765c24c0-cdd9-4a95-8f16-465bc577fb0b",
+              "leftValue": "={{ $json.from }}",
+              "rightValue": "={{ $json.number }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        160
+      ],
+      "id": "48e97610-0a81-407b-b427-643121cd4aee",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1d006c89-86a8-49b7-a371-a5134bc94ba8",
+              "name": "number",
+              "value": "={{ $json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "617cbaeb-f49c-43da-9cc0-717ae6d0d21a",
+              "name": "Name",
+              "value": "={{ $json.rawData.instance }}",
+              "type": "string"
+            },
+            {
+              "id": "b0f31db7-bd3c-4d77-931d-d1e87788faeb",
+              "name": "Date & Time",
+              "value": "={{ $('Webhook').item.json.body.date_time }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        144
+      ],
+      "id": "a99ee95e-12b9-4c86-b2d0-5fcc185710fc",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        144
+      ],
+      "id": "972acca7-399f-4fbd-ad96-744b57696e50",
+      "name": "Wait2",
+      "webhookId": "e8ad5635-2e0b-4f48-a623-521d6a03dc39"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ADVANCED HINGLISH SENTIMENT ANALYZER v2.1 - FIXED\n\n// 1. SAFELY GET WEBHOOK DATA\nlet webhookData = {};\nlet userMessage = '';\nlet userId = '';\n\ntry {\n  // Try to get webhook data from multiple possible sources\n  webhookData = $('Webhook').item.json.body?.data || \n                $('Webhook').item.json.data || \n                $('Webhook').item.json || \n                {};\n  \n  // SAFELY extract user message - handle multiple message types\n  if (webhookData.message) {\n    userMessage = webhookData.message.conversation || \n                  webhookData.message.extendedTextMessage?.text ||\n                  webhookData.message.imageMessage?.caption ||\n                  webhookData.message.videoMessage?.caption ||\n                  webhookData.message.documentMessage?.caption ||\n                  '';\n  }\n  \n  // Fallback: check if message is directly in webhookData\n  if (!userMessage && webhookData.text) {\n    userMessage = webhookData.text;\n  }\n  \n  // Final fallback\n  if (!userMessage) {\n    userMessage = 'hello'; // Default message\n  }\n  \n  userMessage = userMessage.toLowerCase().trim();\n  \n  // SAFELY extract userId\n  userId = webhookData.key?.remoteJid || \n           webhookData.from || \n           'unknown';\n           \n} catch (error) {\n  console.error('Error extracting webhook data:', error.message);\n  // Set defaults\n  userMessage = 'hello';\n  userId = 'unknown';\n  webhookData = {};\n}\n\n// 2. EXPANDED HINGLISH KEYWORDS\nconst sentimentKeywords = {\n  // FRUSTRATION & ANGER (High Priority)\n  frustration: [\n    'samj me nhi', 'samajh nahi', 'samjh nhi', 'samaj nhi',\n    'kya kar rahe', 'kya bol rahe', 'ek hi bat', 'same question',\n    'bar bar', 'kitni baar', 'kab tak', 'baar baar',\n    'tum he', 'tumhe', 'tumse', 'aap he', 'aapse',\n    'work nhi', 'kaam nahi', 'kam nhi', 'krna nhi aata',\n    'nhi aata', 'nahi aata', 'pata nahi', 'malum nahi'\n  ],\n  anger: [\n    'angry', 'gussa', 'gusa', 'frustrated', 'pareshan',\n    'dimag kharab', 'pagal', 'bewakoof', 'bekaar', 'faltu',\n    'time waste', 'bakwas', 'bhej do', 'chup', 'band karo',\n    'leave', 'bye', 'disconnect', 'stop'\n  ],\n  rejection: [\n    'nhi chahiye', 'nahi chahiye', 'no need', 'not interested',\n    'koi interest nahi', 'nhi karna', 'nahi karna', 'mat bhejo',\n    'nhi karvunga', 'nahi karunga', 'nhi lena',\n    'reject', 'cancel', 'forget it', 'rehne do', 'jane do', 'chod do'\n  ],\n  confusion: [\n    'confused', 'confuse', 'samajh nahi aa raha',\n    'kya bol rahe', 'kya keh rahe', 'clear nahi',\n    'pata nahi chal raha', 'ya kya hai', 'matlab'\n  ],\n  // POSITIVE (Lower priority)\n  positive: [\n    'good', 'great', 'awesome', 'perfect', 'thanks', 'thank you',\n    'excellent', 'nice', 'achha', 'accha', 'badiya',\n    'sahi hai', 'theek hai', 'ok', 'okay', 'yes',\n    'haan', 'han', 'ji', 'sure', 'zaroor'\n  ],\n  interested: [\n    'interested', 'price', 'cost', 'kitna', 'kaise',\n    'demo', 'details', 'package', 'plan', 'chahiye',\n    'send', 'bhejo', 'batao', 'kab milega',\n    'how much', 'buy', 'purchase'\n  ]\n};\n\n// 3. CALCULATE SCORES WITH WEIGHTED PRIORITY\nconst scores = {\n  frustration: 0,\n  anger: 0,\n  rejection: 0,\n  confusion: 0,\n  positive: 0,\n  interested: 0\n};\n\n// Count keyword matches\nObject.keys(sentimentKeywords).forEach(category => {\n  sentimentKeywords[category].forEach(keyword => {\n    if (userMessage.includes(keyword)) {\n      scores[category]++;\n    }\n  });\n});\n\n// 4. DETECT REPETITIVE BOT BEHAVIOR (Critical!)\nconst repetitionIndicators = ['ek hi', 'same', 'bar bar', 'baar baar', 'kitni baar', 'phir se', 'dobara'];\nconst isComplaintAboutRepetition = repetitionIndicators.some(phrase => userMessage.includes(phrase));\n\nif (isComplaintAboutRepetition) {\n  scores.frustration += 5; // Heavy weight\n}\n\n// 5. DETECT DIRECT INSULTS/COMPLAINTS ABOUT BOT\nconst botComplaints = ['tumse', 'tumhe', 'tum he', 'aapse', 'aap he', 'nhi aata', 'nahi aata', 'karna nhi aata', 'samajh nahi'];\nconst isComplaintAboutBot = botComplaints.some(phrase => userMessage.includes(phrase));\n\nif (isComplaintAboutBot) {\n  scores.frustration += 10;\n  scores.anger += 3; // This is serious!\n}\n\n// 6. DETERMINE SENTIMENT (Weighted Logic)\nlet sentiment = 'neutral';\nlet priority = 'normal';\nlet action = 'continue';\nlet reason = '';\n\n// CRITICAL: Check negative sentiments FIRST (higher priority)\nif (scores.anger >= 1) {\n  sentiment = 'angry';\n  priority = 'critical';\n  action = 'escalate_immediately';\n  reason = 'User is angry/frustrated with bot';\n} else if (scores.frustration >= 2 || (scores.frustration >= 1 && isComplaintAboutBot)) {\n  sentiment = 'frustrated';\n  priority = 'urgent';\n  action = 'escalate_with_apology';\n  reason = 'User is frustrated, likely with repetitive responses';\n} else if (scores.rejection >= 2) {\n  sentiment = 'rejected';\n  priority = 'high';\n  action = 'apologize_and_pause';\n  reason = 'User explicitly rejected service';\n} else if (scores.confusion >= 2) {\n  sentiment = 'confused';\n  priority = 'medium';\n  action = 'clarify_and_simplify';\n  reason = 'User is confused';\n} else if (scores.interested >= 2) {\n  sentiment = 'interested';\n  priority = 'hot_lead';\n  action = 'continue';\n  reason = 'User showing interest';\n} else if (scores.positive >= 2) {\n  sentiment = 'positive';\n  priority = 'normal';\n  action = 'continue';\n  reason = 'Positive interaction';\n}\n\n// 7. LEAD SCORE CALCULATION\nlet leadScore = 0;\n\nif (userMessage.length > 20) leadScore += 10;\nif (userMessage.includes('?')) leadScore += 15;\nif (scores.interested > 0) leadScore += 30;\nif (scores.positive > 0) leadScore += 20;\n\n// PENALTIES for negative sentiment\nif (scores.anger > 0) leadScore -= 40;\nif (scores.frustration > 0) leadScore -= 30;\nif (scores.rejection > 0) leadScore -= 50;\nif (scores.confusion > 0) leadScore -= 20;\n\nleadScore = Math.max(0, Math.min(100, leadScore));\n\nlet leadQuality = 'cold';\nif (leadScore >= 70) leadQuality = 'hot';\nelse if (leadScore >= 40) leadQuality = 'warm';\nelse if (leadScore < 20) leadQuality = 'at_risk'; // New category!\n\n// 8. RETURN ENRICHED DATA\nreturn [{\n  json: {\n    // Original data\n    userId: userId,\n    message: userMessage,\n    \n    // Enhanced sentiment analysis\n    sentiment: sentiment,\n    sentimentScores: scores,\n    isComplaintAboutBot: isComplaintAboutBot,\n    isComplaintAboutRepetition: isComplaintAboutRepetition,\n    \n    // Priority & Action\n    priority: priority,\n    action: action,\n    reason: reason,\n    shouldEscalate: action.includes('escalate') || action.includes('apologize'),\n    \n    // Lead scoring\n    leadScore: leadScore,\n    leadQuality: leadQuality,\n    \n    // Metadata\n    timestamp: new Date().toISOString(),\n    messageLength: userMessage.length,\n    \n    // Pass through webhook data (safely)\n    webhookData: webhookData\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        512
+      ],
+      "id": "e0eefc65-9b36-450e-b185-0308e635e516",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c522277e-da2a-4676-9a0d-c2e301807298",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "rejected",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "c645b17f-4783-4e1d-814b-7fe5d7131d88",
+              "leftValue": "={{ $json.shouldEscalate }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "2cfbc8a4-f031-470a-b1af-51660368fe2f",
+              "leftValue": "={{ $json.isUrgent }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "3a893c81-849d-4b95-afdc-e9c4ba8a4b9a",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "angry",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "01ec9fce-7acf-4262-83b7-eff2f83d2d63",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "frustrated",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "89b1bef7-2bc2-4a22-8633-b0e93587b915",
+              "leftValue": "={{ $json.isComplaintAboutBot }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "69ea15cf-86c2-44d9-b99f-4844c699003f",
+              "leftValue": "={{ $json.isComplaintAboutRepetition }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        512
+      ],
+      "id": "722f5266-cf84-430e-911e-8337b866355f",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=961852071#gid=961852071",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        512
+      ],
+      "id": "1e904ae1-2067-4a06-94ed-15c02681c693",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "UfhQYiCBLh0IEHCN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fa91c045-47c4-42d8-9a00-399b06c85afd",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        512
+      ],
+      "id": "e1280fc2-f90e-40e5-a9e6-78233cc98512",
+      "name": "If2",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items from previous node\nconst items = $input.all();\n\n// Get Edit Fields data\nconst editFields = $('Edit Fields').first().json;\n\n// ===== IST DATE HELPERS (robust, no string parsing pitfalls) =====\nconst pad = n => String(n).padStart(2,'0');\n\n// Returns IST \"YYYY-MM-DD\" for today using a safe formatter\nconst todayISTYMD = () => {\n  const f = new Intl.DateTimeFormat('en-CA', {\n    timeZone: 'Asia/Kolkata',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit'\n  });\n  return f.format(new Date()); // e.g., \"2025-10-29\"\n};\n\n// Returns IST \"YYYY-MM-DD\" for tomorrow by adding 1 UTC day to today's IST date\nconst tomorrowISTYMD = () => {\n  const [y, m, d] = todayISTYMD().split('-').map(Number);\n  const t = new Date(Date.UTC(y, m - 1, d));\n  t.setUTCDate(t.getUTCDate() + 1);\n  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;\n};\n\n// Null only for Won; otherwise always tomorrow IST\nfunction computeFollowupDate(stage) {\n  return String(stage).toUpperCase() === 'WON' ? null : tomorrowISTYMD();\n}\n\n// FUNCTION: Clean phone number\nconst cleanPhoneNumber = (phone) => {\n  if (!phone) return '';\n  return phone\n    .toString()\n    .replace(/\\n/g, '')\n    .replace(/\\r/g, '')\n    .replace(/\\t/g, '')\n    .replace(/\\s+/g, '')\n    .replace(/@s\\.whatsapp\\.net/g, '')\n    .trim();\n};\n\nconst cleanFrom = cleanPhoneNumber(editFields.from);\n\nconsole.log('=== PHONE NUMBER CLEANING ===');\nconsole.log('Original from:', editFields.from);\nconsole.log('Cleaned from:', cleanFrom);\n\n// ========================================\n// CONVERSATION MEMORY EXTRACTION\n// ========================================\nconsole.log('\\n=== CONVERSATION MEMORY CHECK ===');\n\nlet conversationHistory = [];\ntry {\n  if ($('Redis Chat Message History').all) {\n    conversationHistory = $('Redis Chat Message History').all();\n  } else if ($('Redis').all) {\n    conversationHistory = $('Redis').all();\n  } else if ($('Chat Memory').all) {\n    conversationHistory = $('Chat Memory').all();\n  }\n  console.log('Found conversation history:', conversationHistory.length, 'messages');\n} catch (error) {\n  console.log('Redis node not found or not executed yet, skipping memory check');\n  conversationHistory = [];\n}\n\nlet userMentioned = {\n  productType: 'unknown',\n  modelNumber: 'unknown',\n  size: 'unknown',\n  finish: 'unknown',\n  quantity: 'unknown'\n};\n\nlet conversationLoopCount = 0;\nconst currentUserMessage = editFields.Body ? editFields.Body.toLowerCase() : '';\n\nif (conversationHistory && conversationHistory.length > 0) {\n  const allMessages = conversationHistory.map(item => {\n    const msg = item.json.message || item.json.content || '';\n    return typeof msg === 'string' ? msg : '';\n  }).join(' ').toLowerCase();\n\n  console.log('Total conversation length:', allMessages.length, 'characters');\n\n  // Product type detection\n  if (allMessages.includes('cabinet')) userMentioned.productType = 'Cabinet';\n  if (allMessages.includes('wardrobe')) userMentioned.productType = 'Wardrobe';\n  if (allMessages.includes('profile')) userMentioned.productType = 'Profile';\n  if (allMessages.includes('knob')) userMentioned.productType = 'Knob';\n  if (allMessages.includes('main door') || allMessages.includes('door handle')) userMentioned.productType = 'Main Door';\n\n  // Model detection (expanded)\n  const modelPattern = /\\b(007|008|009|0010|0011|0012|0013|0014|0015|252|253|9001|9002|9003|9004|9005|9007|9008|9009|9010|9011|9018|9019|9020|9021|9023|9024|9025|9026|9027|9028|9029|9030|9031|9032|9033|9034|9035|9036|9037|9038|9039|9040|9041|9042|9043|9044|9045|9046|9047|9048|9049|9050|9051|9052|9053|09|016|028|029|031|032|033|034|034\\\\s?BS|035\\\\s?BS|039|040|041|042|05|022|401|402|404|406|407|408|409|410|412|413|414|415|416|417|418|419|422|9014|9017|90|91|92|93|94|95|96|97|98|99|100)\\b/;\n  const modelMatch = allMessages.match(modelPattern);\n  if (modelMatch) userMentioned.modelNumber = modelMatch[1];\n\n  // Size detection (expanded inch list)\n  const sizePattern = /\\b(32mm|64mm|96mm|128mm|160mm|192mm|200mm|224mm|288mm|300mm|450mm|500mm|600mm|700mm|800mm|900mm|1200mm|2400mm|4\"|6\"|8\"|10\"|12\"|14\"|16\"|18\"|20\"|22\"|24\"|26\"|28\"|30\"|32\"|34\"|36\")\\b/;\n  const sizeMatch = allMessages.match(sizePattern);\n  if (sizeMatch) userMentioned.size = sizeMatch[1];\n\n  // Finish detection\n  const finishes = [\n    'black','rose gold','golden','grey','copper','s.s.','stainless steel','ss',\n    'pvd','matt','sartin','satin','blasting','pista','c.p.','chrome','antique',\n    'brushed','gold pvd','rg pvd','rose gold pvd','s.s. matt','s.s. satin'\n  ];\n  for (const finish of finishes) {\n    if (allMessages.includes(finish)) { userMentioned.finish = finish; break; }\n  }\n\n  // Quantity detection\n  const qtyPattern = /\\b(\\d+)\\s*(pcs|pieces|piece|quantity|pc)\\b/;\n  const qtyMatch = allMessages.match(qtyPattern);\n  if (qtyMatch) userMentioned.quantity = qtyMatch[1];\n\n  // Detect conversation loops\n  const botMessages = conversationHistory.filter(item =>\n    item.json.role === 'assistant' || item.json.sender === 'bot'\n  ).map(item => item.json.message || '').join(' ').toLowerCase();\n\n  const questionPatterns = [\n    'which model','konsa model','which size','konsa size',\n    'which finish','konsa finish','which product','konsa product'\n  ];\n  for (const pattern of questionPatterns) {\n    const matches = (botMessages.match(new RegExp(pattern, 'g')) || []).length;\n    if (matches > 1) conversationLoopCount++;\n  }\n} else {\n  console.log('No conversation history available - first message');\n}\n\nconsole.log('Memory Extraction Results:');\nconsole.log('  Product Type:', userMentioned.productType);\nconsole.log('  Model Number:', userMentioned.modelNumber);\nconsole.log('  Size:', userMentioned.size);\nconsole.log('  Finish:', userMentioned.finish);\nconsole.log('  Quantity:', userMentioned.quantity);\nconsole.log('  Loop Count:', conversationLoopCount);\n\n// ========================================\n// FRUSTRATION DETECTION\n// ========================================\nconsole.log('\\n=== FRUSTRATION DETECTION ===');\n\nconst frustrationKeywords = [\n  'bar bar','same question','repeat','gol gol','pehle pucha','phir se',\n  'samajh nahi','tumse nahi','ek hi baat','kitni baar','frustrated',\n  'angry','kya kar rahe','dimag kharab','pagal','nahi chahiye',\n  'band karo','chod do','irritating','annoying','stop asking'\n];\n\nlet isFrustrated = false;\nlet frustrationTrigger = '';\n\nfor (const keyword of frustrationKeywords) {\n  if (currentUserMessage.includes(keyword)) {\n    isFrustrated = true;\n    frustrationTrigger = keyword;\n    console.log('FRUSTRATION DETECTED! Keyword:', keyword);\n    break;\n  }\n}\n\nif (conversationLoopCount >= 2) {\n  isFrustrated = true;\n  frustrationTrigger = 'repeated_questions';\n  console.log('FRUSTRATION DETECTED! Reason: Too many repeated questions');\n}\n\n// Get AI Agent output\nconst aiAgent = $('AI Agent').first().json;\n\nconsole.log('\\n=== AI Agent Full Output ===');\nconsole.log(JSON.stringify(aiAgent, null, 2));\n\n// Initialize default values\nlet stage = 'Unknown';\nlet shortDiscuss = '';\nlet service = 'Unknown';\nlet priceSend = 'No';\nlet message = '';\nlet interest = '';\nlet followupDate = tomorrowISTYMD(); // default to tomorrow IST\n\n// Try to parse output\ntry {\n  let parsed = {};\n  let rawOutput = '';\n\n  if (aiAgent.output) {\n    console.log('Output field exists, type:', typeof aiAgent.output);\n\n    if (typeof aiAgent.output === 'string') {\n      rawOutput = aiAgent.output;\n\n      // FIXED: Use character codes to create backtick markers\n      var codeBlockMarker = String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96);\n      var jsonMarker = codeBlockMarker + 'json';\n\n      if (rawOutput.indexOf('json') > -1 && rawOutput.indexOf(String.fromCharCode(96)) > -1) {\n        console.log('Detected JSON code block format, cleaning...');\n        rawOutput = rawOutput.split(jsonMarker).join('');\n        rawOutput = rawOutput.split(codeBlockMarker).join('');\n        rawOutput = rawOutput.split('\\n').join('');\n        rawOutput = rawOutput.trim();\n        console.log('Cleaned output:', rawOutput);\n      }\n\n      // Try parsing JSON string\n      try {\n        parsed = JSON.parse(rawOutput);\n        console.log('Parsed from string:', parsed);\n      } catch (parseError) {\n        console.log('Not valid JSON, using as plain text');\n        message = rawOutput;\n      }\n    } else if (typeof aiAgent.output === 'object') {\n      parsed = aiAgent.output;\n      console.log('Using object directly:', parsed);\n    }\n  }\n\n  // Extract fields if parsed successfully\n  if (parsed && Object.keys(parsed).length > 0) {\n    stage = parsed.Stage || parsed.stage || 'Unknown';\n    shortDiscuss = parsed.ShortDiscuss || parsed.shortDiscuss || '';\n    service = parsed.Service || parsed.service || 'Unknown';\n    priceSend = parsed.PriceSend || parsed.priceSend || 'No';\n    interest = parsed.Interest || parsed.interest || '';\n    message = parsed.message || parsed.Message || '';\n  }\n\n  // If message still empty, try other fields\n  if (!message || message === '') {\n    console.log('Message empty, trying alternatives...');\n    if (aiAgent.text) {\n      message = aiAgent.text;\n    } else if (aiAgent.response) {\n      message = aiAgent.response;\n    } else if (shortDiscuss) {\n      message = shortDiscuss;\n    } else {\n      message = 'Hello! How can I help you today?';\n    }\n  }\n\n} catch (error) {\n  console.log('Error in extraction:', error.message);\n  message = 'Hello! How can I assist you?';\n}\n\n// ========================================\n// ANTI-REPETITION & UNKNOWN INTENT GUARDS\n// ========================================\nconsole.log('\\n=== ANTI-REPETITION & UNKNOWN INTENT GUARDS ===');\n\n// Helper: Check if bot already asked this exact question\nfunction isDuplicateBotQuestion(text, history) {\n  const botMsgs = history.filter(i => i.json.role==='assistant' || i.json.sender==='bot')\n                         .map(i => (i.json.message||'').trim().toLowerCase())\n                         .filter(Boolean);\n  const t = (text||'').trim().toLowerCase();\n  return botMsgs.includes(t);\n}\n\n// Helper: Detect unknown intent (anything outside catalog scope)\nfunction isUnknownIntent(userMsg) {\n  const allowed = /(cabinet|wardrobe|profile|knob|main door|door handle|model|size|finish|qty|quantity|pieces|packing|pcs|mm|inch|\\\"|pvd|matt|satin|grey|black|gold|copper|rose|stainless|steel|s\\.s\\.|blasting|sartin|c\\.p\\.|chrome|antique|brushed)/i;\n  return !allowed.test(userMsg||'');\n}\n\n// Guard 1: Prevent repeating same bot question\nif (isDuplicateBotQuestion(message, conversationHistory)) {\n  console.log('DUPLICATE BOT QUESTION DETECTED! Skipping repetition.');\n  // Do not override message here; let stage validator push next missing field\n  // Or set a neutral fallback if stage is stuck\n}\n\n// Guard 2: Fallback for unknown intent (comparisons, unsupported queries)\nif (isUnknownIntent(currentUserMessage) && currentUserMessage.length > 3) {\n  console.log('UNKNOWN INTENT DETECTED! User asked:', currentUserMessage);\n  console.log('Triggering sales executive fallback.');\n  message = 'Our sales executive will contact shortly.';\n  priceSend = 'No';\n  // Keep current stage forward-moving (do not reset to NEW LEAD)\n  if (shortDiscuss.indexOf('Unknown intent') === -1) {\n    shortDiscuss = shortDiscuss + ' (Unknown intent fallback)';\n  }\n}\n\n// ========================================\n// FRUSTRATION OVERRIDE\n// ========================================\nif (isFrustrated) {\n  console.log('\\n=== FRUSTRATION OVERRIDE ===');\n  stage = 'Close';\n  shortDiscuss = 'User frustrated - ' + frustrationTrigger;\n  service = service !== 'Unknown' ? service : 'Escalated';\n  priceSend = 'No';\n  message = 'I sincerely apologize for the confusion. Let me connect you to our product specialist who will assist you better. Please share your WhatsApp number and they will call you within 10 minutes.';\n  interest = 'Escalated - User Frustrated';\n}\n\n// ========================================\n// STAGE PROGRESSION VALIDATOR\n// ========================================\nconsole.log('\\n=== STAGE PROGRESSION VALIDATOR ===');\n\nlet calculatedStage = stage;\n\nif (userMentioned.productType !== 'unknown') calculatedStage = 'QUALIFY';\nif (userMentioned.modelNumber !== 'unknown') calculatedStage = 'QUALIFY';\nif (userMentioned.size !== 'unknown') calculatedStage = 'PROSPECT';\nif (userMentioned.finish !== 'unknown') calculatedStage = 'PROSPECT';\nif (userMentioned.quantity !== 'unknown') calculatedStage = 'PRICE SEND';\n\nif (!isFrustrated && stage !== 'Close' && stage !== 'Won') {\n  const stageOrder = ['NEW LEAD', 'QUALIFY', 'PROSPECT', 'PRICE SEND', 'Won', 'Close'];\n  const currentIndex = stageOrder.indexOf(stage);\n  const calculatedIndex = stageOrder.indexOf(calculatedStage);\n  if (calculatedIndex > currentIndex) {\n    console.log('STAGE CORRECTION: AI said', stage, 'but memory suggests', calculatedStage);\n    stage = calculatedStage;\n    if (shortDiscuss.indexOf('corrected') === -1) shortDiscuss = shortDiscuss + ' (stage corrected)';\n  }\n}\n\n// ==== ROW LOOKUP AND MERGE (Get row(s) in sheet1) ====\n// Finds existing contact row, adds row_number and exists flag\nconsole.log('\\n=== ROW LOOKUP ===');\nconst rows = $('Get row(s) in sheet1').all().map(r => r.json);\nconst key  = String(cleanFrom).replace(/\\D/g,'');\nconst hit  = rows.find(r => String(r.number).replace(/\\D/g,'') === key);\nconst row_number = hit ? hit.row_number : null;\nconst exists = !!hit;\nconsole.log('Row exists:', exists, '| Row number:', row_number);\n\n// ==== FINAL FOLLOWUPDATE ENFORCEMENT (IST RULE) ====\n// Always compute from current chat time in IST; null only for Won\nconst enforcedFollowupDate = computeFollowupDate(stage);\n\nconsole.log('\\n=== FINAL OUTPUT VALUES ===');\nconsole.log('Stage:', stage);\nconsole.log('ShortDiscuss:', shortDiscuss);\nconsole.log('Service:', service);\nconsole.log('PriceSend:', priceSend);\nconsole.log('FollowupDate (computed IST):', enforcedFollowupDate);\nconsole.log('Message:', message);\n\n// ========================================\n// FINAL OUTPUT (single payload)\n// ========================================\nreturn [{\n  json: {\n    number: cleanFrom,\n    instance: editFields.instance,\n    Stage: stage,\n    ShortDiscuss: shortDiscuss || `Collect1(), Pending1(Product Model Size Finish Qty)`,\n    Service: service || 'Unknown',\n    PriceSend: priceSend,\n    FollowupDate: enforcedFollowupDate,\n    message: message,\n    Interest: interest,\n    UserMentionedProduct: userMentioned.productType,\n    UserMentionedModel: userMentioned.modelNumber,\n    UserMentionedSize: userMentioned.size,\n    UserMentionedFinish: userMentioned.finish,\n    UserMentionedQuantity: userMentioned.quantity,\n    ConversationLoops: conversationLoopCount,\n    IsFrustrated: isFrustrated ? 'Yes' : 'No',\n    FrustrationTrigger: frustrationTrigger || 'None',\n    row_number,\n    exists\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        512
+      ],
+      "id": "72a26957-c878-443b-a106-e9dc4cd2c19c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        512
+      ],
+      "id": "1bff2705-8c07-4e14-94c1-428b2e1c1792",
+      "name": "Wait",
+      "webhookId": "28529048-12cb-493f-9f39-9d2d35821685"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize sender → stable sessionId\nconst b = $json.body?.data || $json.data || $json || {};\nconst jid = b.key?.remoteJid || '';\nconst senderPn = b.key?.senderPn || '';\nlet sessionId = senderPn || jid.replace('@s.whatsapp.net','').replace('@c.us','');\nif (jid.includes('@lid') && senderPn) sessionId = senderPn;\n\n// Extract text safely\nlet text = '';\nif (b.message?.conversation) text = b.message.conversation;\nelse if (b.message?.extendedTextMessage?.text) text = b.message.extendedTextMessage.text;\nelse if ($json.text) text = $json.text;\n\nreturn [{\n  json: {\n    sessionId,\n    instance: $json.body?.instance || $json.instance || '',\n    from: jid,\n    message: text || ''\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        528
+      ],
+      "id": "526bda9d-83c6-4f13-8288-d97e8fe3ff13",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "content": "Excel Perfection\n1. sheet 1 me number, name, created date ae dena he.. no duplicate entry\n2. sheet 2 me number, create date, stage, short discuss, followup date(logical), message update, service/product, followup date, lead quality\n3. sheet 3 me shift won lead to sheet 3"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -304,
+        128
+      ],
+      "typeVersion": 1,
+      "id": "f54595ef-866f-4fbd-87ea-66a73338fb9d",
+      "name": "Sticky Note",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=961852071#gid=961852071",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "number"
+          ],
+          "schema": [
+            {
+              "id": "number",
+              "displayName": "number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ShortDiscuss",
+              "displayName": "ShortDiscuss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PriceSend",
+              "displayName": "PriceSend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FollowupDate",
+              "displayName": "FollowupDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "_meta",
+              "displayName": "_meta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "from",
+              "displayName": "from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "instance",
+              "displayName": "instance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Number",
+              "displayName": "Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Id",
+              "displayName": "Id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interest",
+              "displayName": "Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedProduct",
+              "displayName": "UserMentionedProduct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedModel",
+              "displayName": "UserMentionedModel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedSize",
+              "displayName": "UserMentionedSize",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedFinish",
+              "displayName": "UserMentionedFinish",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedQuantity",
+              "displayName": "UserMentionedQuantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ConversationLoops",
+              "displayName": "ConversationLoops",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "IsFrustrated",
+              "displayName": "IsFrustrated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FrustrationTrigger",
+              "displayName": "FrustrationTrigger",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        416
+      ],
+      "id": "f4cf7d84-f411-4dea-9f78-05ad6f81c278",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "UfhQYiCBLh0IEHCN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1l0ZkLy6DP2QNa_CtK_gptz7pDmmH-Pudhn9B0mo7LT8/edit?gid=961852071#gid=961852071",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "number"
+          ],
+          "schema": [
+            {
+              "id": "number",
+              "displayName": "number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ShortDiscuss",
+              "displayName": "ShortDiscuss",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PriceSend",
+              "displayName": "PriceSend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FollowupDate",
+              "displayName": "FollowupDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "_meta",
+              "displayName": "_meta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "from",
+              "displayName": "from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "instance",
+              "displayName": "instance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Number",
+              "displayName": "Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Id",
+              "displayName": "Id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interest",
+              "displayName": "Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedProduct",
+              "displayName": "UserMentionedProduct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedModel",
+              "displayName": "UserMentionedModel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedSize",
+              "displayName": "UserMentionedSize",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedFinish",
+              "displayName": "UserMentionedFinish",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserMentionedQuantity",
+              "displayName": "UserMentionedQuantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ConversationLoops",
+              "displayName": "ConversationLoops",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "IsFrustrated",
+              "displayName": "IsFrustrated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FrustrationTrigger",
+              "displayName": "FrustrationTrigger",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1408,
+        592
+      ],
+      "id": "1c9f737c-227b-40ad-9de6-01c894d53144",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "UfhQYiCBLh0IEHCN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "System Messgae\n1. business technical details\n2. slaes process and  stages\n3. don't and do regulations"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        48
+      ],
+      "typeVersion": 1,
+      "id": "ae4defb4-aee8-4b1b-9f9d-d97e63b0121d",
+      "name": "Sticky Note1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $json.instance }}",
+        "remoteJid": "={{ $json.number }}",
+        "messageText": "={{ $json.message }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        416
+      ],
+      "id": "73d3a9c0-db65-4c3a-8183-dfed4cdac47c",
+      "name": "Enviar texto1",
+      "executeOnce": true,
+      "credentials": {
+        "evolutionApi": {
+          "id": "ERcZmnESq7MYVd3J",
+          "name": "Evolution account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "06222181-c76e-42aa-a1a5-e0af99cacd18",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "571938187776e2a549b4e0006e5955331d0e61f833188a54cdb1cb80303b0fbd"
+  },
+  "id": "94ZCmj5Xu4c2i74J",
+  "tags": []
+}
